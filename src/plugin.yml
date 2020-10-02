@@ -1,0 +1,6 @@
+name: MineOnlinePinger
+author: RhysB
+website: github.com/rhysb
+main: com.johnymuffin.beta.mineonline.pinger.MineOnlinePinger
+version: 1.0.1
+visible: false
