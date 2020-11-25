@@ -86,7 +86,7 @@ public class MineOnlinePinger extends JavaPlugin {
     @Override
     public void onDisable() {
         logger(Level.INFO, "Disabling.");
-        if(taskID != null) {
+        if (taskID != null) {
             Bukkit.getServer().getScheduler().cancelTask(taskID);
         }
     }
@@ -105,13 +105,10 @@ public class MineOnlinePinger extends JavaPlugin {
         tmp.put("onlinemode", mopConfig.getConfigBoolean("onlineMode"));
         tmp.put("md5", mopConfig.getConfigString("version-md5"));
         tmp.put("whitelisted", Bukkit.getServer().hasWhitelist());
-        tmp.put("whitelistUsers", new JSONArray());
-        tmp.put("whitelistIPs", new JSONArray());
-        tmp.put("whitelistUUIDs", new JSONArray());
-        tmp.put("bannedUsers", new JSONArray());
-        tmp.put("bannedIPs", new JSONArray());
-        tmp.put("bannedUUIDs", new JSONArray());
-        tmp.put("owner", mopConfig.getConfigString("serverOwner"));
+        tmp.put("motd", mopConfig.getConfigString("motd"));
+        tmp.put("dontListPlayers", false);
+        tmp.put("useBetaEvolutionsAuth", mopConfig.getConfigBoolean("useBetaEvolutionsAuth"));
+
         JSONArray playersNames = new JSONArray();
         for (Player p : Bukkit.getOnlinePlayers()) {
             playersNames.add(p.getName());

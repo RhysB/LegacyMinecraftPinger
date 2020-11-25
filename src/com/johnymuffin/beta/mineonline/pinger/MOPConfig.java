@@ -27,7 +27,7 @@ public class MOPConfig extends Configuration {
             convertToNewConfig();
         }
         generateConfigOption("config-version", 1);
-        generateConfigOption("url", "http://mineonline.codie.gg/api/servers");
+        generateConfigOption("url", "https://mineonline.codie.gg/api/servers");
         generateConfigOption("serverName", "My Test Server");
         generateConfigOption("serverIP", "mc.minecraft.test");
         generateConfigOption("serverOwner", "ThatGuy");
@@ -35,6 +35,8 @@ public class MOPConfig extends Configuration {
         generateConfigOption("port", Bukkit.getServer().getPort());
         generateConfigOption("pingTime", 45);
         generateConfigOption("version-md5", "CC263AA969F2D8621C5443A5A18897E2");
+        generateConfigOption("motd", "Hello");
+        generateConfigOption("useBetaEvolutionsAuth", false);
     }
 
 
