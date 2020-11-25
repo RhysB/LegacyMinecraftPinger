@@ -7,10 +7,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import javax.imageio.ImageIO;
+import javax.xml.bind.DatatypeConverter;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +25,8 @@ public class MineOnlinePinger extends JavaPlugin {
     private PluginDescriptionFile pdf;
     private MOPConfig mopConfig;
     private Integer taskID;
+    private String serverIcon;
+
 
     @Override
     public void onEnable() {
@@ -39,6 +41,17 @@ public class MineOnlinePinger extends JavaPlugin {
             Bukkit.getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        //Load Image
+        File serverIconFile = new File(plugin.getDataFolder(), "server-icon.png");
+        if (serverIconFile.exists()) {
+            logger(Level.INFO, "Loading Server Icon into cache.");
+            serverIcon = loadIcon(serverIconFile);
+            if (serverIcon != null) {
+                logger(Level.INFO, "Server Icon has been loaded into cache.");
+            }
+        }
+
 
         taskID = Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
             final String jsonData = generateJsonData().toJSONString();
@@ -108,6 +121,9 @@ public class MineOnlinePinger extends JavaPlugin {
         tmp.put("motd", mopConfig.getConfigString("motd"));
         tmp.put("dontListPlayers", false);
         tmp.put("useBetaEvolutionsAuth", mopConfig.getConfigBoolean("useBetaEvolutionsAuth"));
+        if (serverIcon != null) {
+            tmp.put("serverIcon", serverIcon);
+        }
 
         JSONArray playersNames = new JSONArray();
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -116,6 +132,26 @@ public class MineOnlinePinger extends JavaPlugin {
         tmp.put("players", playersNames);
 
         return tmp;
+    }
+
+
+    private String loadIcon(File file) {
+        try {
+            BufferedImage bufferedImage = ImageIO.read(file);
+            if (!(bufferedImage.getHeight() == 64 && bufferedImage.getWidth() == 64)) {
+                logger(Level.INFO, "The server-icon image has invalid dimensions, " + bufferedImage.getHeight() + "x" + bufferedImage.getWidth() + ". Try 64x64");
+                return null;
+            }
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "png", output);
+            String base64String = DatatypeConverter.printBase64Binary(output.toByteArray());
+            base64String = base64String.replace("\n", "");
+            return base64String;
+        } catch (Exception e) {
+            log.log(Level.WARNING, "An error occured reading the server-icon", e);
+        }
+        return null;
+
     }
 
 
