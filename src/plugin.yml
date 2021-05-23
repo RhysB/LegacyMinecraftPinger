@@ -1,6 +1,6 @@
-name: MineOnlinePinger
+name: LegacyMinecraftPinger
 author: RhysB
 website: github.com/rhysb
-main: com.johnymuffin.beta.mineonline.pinger.MineOnlinePinger
-version: 1.0.3
+main: com.johnymuffin.beta.legacyminecraft.pinger.LegacyMinecraftPinger
+version: 1.0.4
 visible: false

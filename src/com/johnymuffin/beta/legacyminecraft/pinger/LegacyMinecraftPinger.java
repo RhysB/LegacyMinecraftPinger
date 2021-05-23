@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -80,6 +81,8 @@ public class MineOnlinePinger extends JavaPlugin {
                         response.append(line);
                         response.append('\r');
                     }
+                    System.out.println(response);
+
                     rd.close();
                 } catch (Exception e) {
                     Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
@@ -105,35 +108,56 @@ public class MineOnlinePinger extends JavaPlugin {
     }
 
     public void logger(Level level, String message) {
-        Bukkit.getLogger().log(level, "[" + pluginName + "] " + message);
+        Bukkit.getServer().getLogger().log(level, "[" + pluginName + "] " + message);
     }
 
     public JSONObject generateJsonData() {
         JSONObject tmp = new JSONObject();
-        tmp.put("ip", mopConfig.getConfigString("serverIP"));
-        tmp.put("port", mopConfig.getConfigString("port"));
-        tmp.put("users", Bukkit.getServer().getOnlinePlayers().length);
-        tmp.put("max", Bukkit.getServer().getMaxPlayers());
         tmp.put("name", mopConfig.getConfigString("serverName"));
-        tmp.put("onlinemode", mopConfig.getConfigBoolean("onlineMode"));
-        tmp.put("md5", mopConfig.getConfigString("version-md5"));
-        tmp.put("whitelisted", Bukkit.getServer().hasWhitelist());
-        tmp.put("motd", mopConfig.getConfigString("motd"));
-        tmp.put("dontListPlayers", false);
-        tmp.put("useBetaEvolutionsAuth", mopConfig.getConfigBoolean("useBetaEvolutionsAuth"));
+        tmp.put("description", mopConfig.getConfigString("description"));
+        tmp.put("version", mopConfig.getConfigString("version"));
+        tmp.put("ip", mopConfig.getConfigString("serverIP"));
+        tmp.put("port", mopConfig.getConfigInteger("serverPort"));
+        tmp.put("onlineMode", mopConfig.getConfigBoolean("onlineMode"));
+        tmp.put("maxPlayers", mopConfig.getConfigString("maxPlayers"));
+        tmp.put("key", mopConfig.getConfigString("key.value"));
+        JSONArray playerArray = new JSONArray();
+        for (Player p : Bukkit.getServer().getOnlinePlayers()) {
+            JSONObject playerData = new JSONObject();
+            playerData.put("username", p.getName());
+            playerData.put("uuid", generateOfflineUUID(p.getName()).toString());
+            playerData.put("x", p.getLocation().getX());
+            playerData.put("y", p.getLocation().getY());
+            playerData.put("z", p.getLocation().getZ());
+            playerData.put("world", p.getLocation().getWorld());
+            //TODO: Seconds Online
+            playerData.put("secondsOnline", 0);
+        }
+        tmp.put("players", playerArray);
+        tmp.put("playersOnline", playerArray.size());
+        //Flags - Start
+        JSONArray flags = new JSONArray();
+        JSONObject betaEVOFlag = new JSONObject();
+        betaEVOFlag.put("enabled", mopConfig.getConfigBoolean("flags.BetaEvolutions.enabled"));
+        betaEVOFlag.put("name", "BetaEvolutions");
+        flags.add(betaEVOFlag);
+        JSONObject mineOnlineFlag = new JSONObject();
+        mineOnlineFlag.put("name", "MineOnline");
+        mineOnlineFlag.put("enabled", mopConfig.getConfigBoolean("flags.MineOnline.enabled"));
+        flags.add(mineOnlineFlag);
+        //Flags - End
+        tmp.put("flags", flags);
+        tmp.put("protocol", 1);
         if (serverIcon != null) {
             tmp.put("serverIcon", serverIcon);
         }
-
-        JSONArray playersNames = new JSONArray();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            playersNames.add(p.getName());
-        }
-        tmp.put("players", playersNames);
-
+        System.out.println(tmp.toJSONString());
         return tmp;
     }
 
+    public static UUID generateOfflineUUID(String username) {
+        return UUID.nameUUIDFromBytes(username.getBytes());
+    }
 
     private String loadIcon(File file) {
         try {
@@ -148,7 +172,7 @@ public class MineOnlinePinger extends JavaPlugin {
             base64String = base64String.replace("\n", "");
             return base64String;
         } catch (Exception e) {
-            log.log(Level.WARNING, "An error occured reading the server-icon", e);
+            log.log(Level.WARNING, "An error occurred reading the server-icon", e);
         }
         return null;
 

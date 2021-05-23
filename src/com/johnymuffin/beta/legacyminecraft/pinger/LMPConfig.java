@@ -1,15 +1,15 @@
-package com.johnymuffin.beta.mineonline.pinger;
+package com.johnymuffin.beta.legacyminecraft.pinger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.util.config.Configuration;
 
 import java.io.File;
 
-public class MOPConfig extends Configuration {
+public class LMPConfig extends Configuration {
     private boolean isNew = true;
 
 
-    public MOPConfig(File file) {
+    public LMPConfig(File file) {
         super(file);
         this.isNew = !file.exists();
         reload();
@@ -27,16 +27,24 @@ public class MOPConfig extends Configuration {
             convertToNewConfig();
         }
         generateConfigOption("config-version", 1);
-        generateConfigOption("url", "https://mineonline.codie.gg/api/servers");
+        generateConfigOption("url", "https://servers.api.legacyminecraft.com/api/v1/serverPing");
         generateConfigOption("serverName", "My Test Server");
-        generateConfigOption("serverIP", "mc.minecraft.test");
+        generateConfigOption("description", "My server is pretty nice, you should check it out!");
+        generateConfigOption("version", "B1.7.3");
+        generateConfigOption("serverIP", "mc.retromc.org");
+        generateConfigOption("serverPort", Bukkit.getServer().getPort());
+        generateConfigOption("onlineMode", Bukkit.getServer().getOnlineMode());
         generateConfigOption("serverOwner", "ThatGuy");
-        generateConfigOption("onlineMode", true);
-        generateConfigOption("port", Bukkit.getServer().getPort());
         generateConfigOption("pingTime", 45);
-        generateConfigOption("version-md5", "CC263AA969F2D8621C5443A5A18897E2");
-        generateConfigOption("motd", "Hello");
-        generateConfigOption("useBetaEvolutionsAuth", false);
+        generateConfigOption("maxPlayers", Bukkit.getServer().getMaxPlayers());
+        generateConfigOption("key.info", "A key is required to list your server on the Legacy Minecraft server list. Please contact Johny Muffin#9406 on Discord for a key, or email legacykey@johnymuffin.com to get one.");
+        generateConfigOption("key.value", "");
+
+        generateConfigOption("flags.BetaEvolutions.enabled", false);
+        generateConfigOption("flags.BetaEvolutions.info", "Enabled this if your server runs Beta Evolutions");
+        generateConfigOption("flags.MineOnline.enabled", true);
+        generateConfigOption("flags.MineOnline.info", "Enable this flag if you want your server to be listed on the MineOnline launcher.");
+
     }
 
 
