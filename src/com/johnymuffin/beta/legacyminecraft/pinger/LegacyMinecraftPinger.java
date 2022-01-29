@@ -1,5 +1,8 @@
 package com.johnymuffin.beta.legacyminecraft.pinger;
 
+import com.johnymuffin.beta.legacyminecraft.pinger.config.ConfigurationFile;
+import com.johnymuffin.beta.legacyminecraft.pinger.config.JSONConfiguration;
+import com.johnymuffin.beta.legacyminecraft.pinger.config.YMLConfiguration;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -25,9 +28,10 @@ public class LegacyMinecraftPinger extends JavaPlugin {
     private Logger log;
     private String pluginName;
     private PluginDescriptionFile pdf;
-    private LMPConfig LMPConfig;
     private Integer taskID;
     private String serverIcon;
+
+    private ConfigurationFile LMPConfig;
 
 
     @Override
@@ -37,8 +41,47 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         pdf = this.getDescription();
         pluginName = pdf.getName();
         log.info("[" + pluginName + "] Is Loading, Version: " + pdf.getVersion());
-        this.LMPConfig = new LMPConfig(new File(this.getDataFolder(), "config.yml"));
-        if (LMPConfig.isNew()) {
+
+        //Generate Config
+        File configFile;
+        boolean newConfig;
+        try {
+            configFile = new File(this.getDataFolder(), "config.yml");
+            newConfig = !configFile.exists();
+            LMPConfig = new YMLConfiguration(configFile);
+        } catch (Exception exception) {
+            logger(Level.WARNING, "YML Configuration file mode failed. Falling back to JSON.");
+            configFile = new File(this.getDataFolder(), "config.json");
+            newConfig = !configFile.exists();
+            LMPConfig = new JSONConfiguration(configFile);
+        }
+
+        LMPConfig.load();
+
+        LMPConfig.generateConfigOption("config-version", 1);
+        LMPConfig.generateConfigOption("url", "https://servers.api.legacyminecraft.com/api/v1/serverPing");
+        LMPConfig.generateConfigOption("serverName", "My Test Server");
+        LMPConfig.generateConfigOption("description", "My server is pretty nice, you should check it out!");
+        LMPConfig.generateConfigOption("version", "B1.7.3");
+        LMPConfig.generateConfigOption("serverIP", "mc.retromc.org");
+        LMPConfig.generateConfigOption("serverPort", Bukkit.getServer().getPort());
+        LMPConfig.generateConfigOption("onlineMode", Bukkit.getServer().getOnlineMode());
+        LMPConfig.generateConfigOption("serverOwner", "ThatGuy");
+        LMPConfig.generateConfigOption("pingTime", 45);
+        LMPConfig.generateConfigOption("maxPlayers", Bukkit.getServer().getMaxPlayers());
+        LMPConfig.generateConfigOption("key.info", "A key is required to list your server on the Legacy Minecraft server list. Please contact Johny Muffin#9406 on Discord for a key, or email legacykey@johnymuffin.com to get one.");
+        LMPConfig.generateConfigOption("key.value", "");
+        LMPConfig.generateConfigOption("debug", false);
+
+        LMPConfig.generateConfigOption("flags.BetaEvolutions.enabled", false);
+        LMPConfig.generateConfigOption("flags.BetaEvolutions.info", "Enabled this if your server runs Beta Evolutions");
+        LMPConfig.generateConfigOption("flags.MineOnline.enabled", true);
+        LMPConfig.generateConfigOption("flags.MineOnline.info", "Enable this flag if you want your server to be listed on the MineOnline launcher.");
+
+        LMPConfig.writeConfigurationFile();
+
+
+        if (newConfig) {
             logger(Level.WARNING, "Stopping the plugin as the config needs to be set correctly.");
             Bukkit.getServer().getPluginManager().disablePlugin(this);
             return;
@@ -98,7 +141,9 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                     rd.close();
                 } catch (Exception e) {
                     plugin.logger(Level.WARNING, "An error occurred when attempting to ping: " + e + ": " + e.getMessage());
-                    plugin.logger(Level.WARNING, "Ping Object: " + jsonData);
+                    if (this.LMPConfig.getConfigBoolean("debug")) {
+                        plugin.logger(Level.WARNING, "Ping Object: " + jsonData);
+                    }
                 } finally {
                     if (connection != null)
                         connection.disconnect();
@@ -165,6 +210,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         if (serverIcon != null) {
             tmp.put("serverIcon", serverIcon);
         }
+        tmp.put("edition", "1.2.5");
         return tmp;
     }
 
