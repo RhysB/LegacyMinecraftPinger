@@ -91,15 +91,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         LMPConfig.writeConfigurationFile();
 
         //Verify UUID string
-        if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
-            try {
-                UUID uuid = UUID.fromString("settings.force-server-uuid.value");
-            } catch (Exception e) {
-                logger(Level.WARNING, "A invalid UUID has been specified. The setting is being disabled.");
-                LMPConfig.writeConfigOption("settings.force-server-uuid.enabled", false);
-                LMPConfig.writeConfigurationFile();
-            }
-        }
+        verifyUUIDString();
 
         if (newConfig) {
             logger(Level.WARNING, "Stopping the plugin as the config needs to be set correctly.");
@@ -155,7 +147,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         //Logic to run on first successful ping.
                         if(firstPing) {
                             //Automatically enforce key if server is authenticated.
-                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.value")) {
+                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled") && LMPConfig.getConfigString("settings.force-server-uuid.value").isEmpty()) {
                                 plugin.logger(Level.INFO, "-------------------[" + plugin.getDescription().getName() + "]-------------------");
                                 plugin.logger(Level.INFO, "Enabling key enforcement as server is authenticated and this can prevent issues if your details every change.\n" +
                                         "If you ever want to disable this, remove your authentication key, and set uuid override to disabled in the config file then restart.");
@@ -163,6 +155,8 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                                 LMPConfig.writeConfigOption("settings.force-server-uuid.enabled", true);
                                 LMPConfig.writeConfigOption("settings.force-server-uuid.value", serverUUID.toString());
                                 LMPConfig.writeConfigurationFile();
+                                //Verify UUID incase bad UUID was returned
+                                verifyUUIDString();
                                 plugin.logger(Level.INFO, "-----------------------------------------------");
                             }
                             firstPing = false;
@@ -201,6 +195,20 @@ public class LegacyMinecraftPinger extends JavaPlugin {
 
     }
 
+
+    public void verifyUUIDString() {
+        if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+            try {
+                UUID uuid = UUID.fromString("settings.force-server-uuid.value");
+            } catch (Exception e) {
+                logger(Level.WARNING, "A invalid UUID has been specified. The setting is being disabled.");
+                LMPConfig.writeConfigOption("settings.force-server-uuid.enabled", false);
+                LMPConfig.writeConfigOption("settings.force-server-uuid.value", "");
+                LMPConfig.writeConfigurationFile();
+            }
+        }
+    }
+
     @Override
     public void onDisable() {
         logger(Level.INFO, "Disabling.");
@@ -225,7 +233,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         tmp.put("key", LMPConfig.getConfigString("key.value"));
         tmp.put("show-cords", LMPConfig.getConfigBoolean("settings.show-cords.value"));
         if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
-            tmp.put("uuid", "settings.force-server-uuid.value");
+            tmp.put("uuid", UUID.fromString(LMPConfig.getConfigString("settings.force-server-uuid.value")).toString()); //Error out at the server level if UUID is invalid.
         }
 
         JSONArray playerArray = new JSONArray();

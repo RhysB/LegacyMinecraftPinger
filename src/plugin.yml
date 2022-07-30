@@ -2,5 +2,5 @@ name: LegacyMinecraftPinger
 author: RhysB
 website: github.com/rhysb
 main: com.johnymuffin.beta.legacyminecraft.pinger.LegacyMinecraftPinger
-version: 1.2.12
+version: 1.2.13
 visible: false
