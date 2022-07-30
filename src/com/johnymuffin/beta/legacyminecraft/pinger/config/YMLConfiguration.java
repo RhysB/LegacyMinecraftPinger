@@ -28,6 +28,11 @@ public class YMLConfiguration extends Configuration implements ConfigurationFile
         this.setProperty(key, value);
     }
 
+    public void writeConfigOption(String key, Object value) {
+        this.setProperty(key, value);
+        this.fileChanged = true;
+    }
+
     @Override
     public void writeConfigurationFile() {
         if(fileChanged) {

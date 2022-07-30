@@ -18,6 +18,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,6 +34,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
 
     private ConfigurationFile LMPConfig;
 
+    private boolean firstPing = true;
 
     @Override
     public void onEnable() {
@@ -51,6 +53,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
             LMPConfig = new YMLConfiguration(configFile);
         } catch (Exception exception) {
             logger(Level.WARNING, "YML Configuration file mode failed. Falling back to JSON.");
+            exception.printStackTrace();
             configFile = new File(this.getDataFolder(), "config.json");
             newConfig = !configFile.exists();
             LMPConfig = new JSONConfiguration(configFile);
@@ -69,9 +72,16 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         LMPConfig.generateConfigOption("serverOwner", "ThatGuy");
         LMPConfig.generateConfigOption("pingTime", 45);
         LMPConfig.generateConfigOption("maxPlayers", Bukkit.getServer().getMaxPlayers());
-        LMPConfig.generateConfigOption("key.info", "A key is required to list your server on the Legacy Minecraft server list. Please contact Johny Muffin#9406 on Discord for a key, or email legacykey@johnymuffin.com to get one.");
+        LMPConfig.generateConfigOption("key.info", "A key is required if you want to list your server with a image and have it be authenticated. Please contact Johny Muffin#9406 on Discord for a key, or email legacykey@johnymuffin.com to get one.");
         LMPConfig.generateConfigOption("key.value", "");
         LMPConfig.generateConfigOption("debug", false);
+
+        LMPConfig.generateConfigOption("settings.show-cords.value", false);
+        LMPConfig.generateConfigOption("settings.show-cords.info", "Makes the coordinates of players accessible via the API.");
+
+        LMPConfig.generateConfigOption("settings.force-server-uuid.enabled", false);
+        LMPConfig.generateConfigOption("settings.force-server-uuid.value", "");
+        LMPConfig.generateConfigOption("settings.force-server-uuid.info", "Allows a server owner to force the UUID the server. This is recommend once you receive a key meaning your UUID won't change if any of your details do. YOUR SERVER MUST HAVE A VALID KEY FOR THE APPROPRIATE UUID TO USE THIS SETTING.");
 
         LMPConfig.generateConfigOption("flags.BetaEvolutions.enabled", false);
         LMPConfig.generateConfigOption("flags.BetaEvolutions.info", "Enabled this if your server runs Beta Evolutions");
@@ -80,6 +90,16 @@ public class LegacyMinecraftPinger extends JavaPlugin {
 
         LMPConfig.writeConfigurationFile();
 
+        //Verify UUID string
+        if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+            try {
+                UUID uuid = UUID.fromString("settings.force-server-uuid.value");
+            } catch (Exception e) {
+                logger(Level.WARNING, "A invalid UUID has been specified. The setting is being disabled.");
+                LMPConfig.writeConfigOption("settings.force-server-uuid.enabled", false);
+                LMPConfig.writeConfigurationFile();
+            }
+        }
 
         if (newConfig) {
             logger(Level.WARNING, "Stopping the plugin as the config needs to be set correctly.");
@@ -132,6 +152,32 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         if (jsonResponse.containsKey("notice")) {
                             plugin.logger(Level.INFO, "Message from API: " + String.valueOf(jsonResponse.get("notice")));
                         }
+                        //Logic to run on first successful ping.
+                        if(firstPing) {
+                            //Automatically enforce key if server is authenticated.
+                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+                                plugin.logger(Level.INFO, "-------------------[" + plugin.getDescription().getName() + "]-------------------");
+                                plugin.logger(Level.INFO, "Enabling key enforcement as server is authenticated and this can prevent issues if your details every change.\n" +
+                                        "If you ever want to disable this, remove your authentication key, and set uuid override to disabled in the config file then restart.");
+                                UUID serverUUID = UUID.fromString(String.valueOf(jsonResponse.get("uuid")));
+                                LMPConfig.writeConfigOption("settings.force-server-uuid.enabled", true);
+                                LMPConfig.writeConfigOption("settings.force-server-uuid.value", serverUUID.toString());
+                                LMPConfig.writeConfigurationFile();
+                                plugin.logger(Level.INFO, "-----------------------------------------------");
+                            }
+                            firstPing = false;
+                        }
+
+                        //Allow the API to direct the plugin to set a key. This will be used in the future for automatic verification.
+                        if(jsonResponse.containsKey("newKey")) {
+                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated")))) {
+                             plugin.logger(Level.INFO, "Your server has been remotely authenticated by the API.");
+                            }
+                            plugin.logger(Level.INFO,"The API has provided the authentication key" + String.valueOf(jsonResponse.get("newKey")) + ". Automatically setting this key in the config.");
+                            LMPConfig.writeConfigOption("key.value", String.valueOf(jsonResponse.get("newKey")));
+                            LMPConfig.writeConfigurationFile();
+                        }
+
 
                     } catch (Exception e) {
                         plugin.logger(Level.INFO, "Malformed JSON response after ping returned normal status code: " + e + ": " + e.getMessage());
@@ -177,6 +223,11 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         tmp.put("onlineMode", LMPConfig.getConfigBoolean("onlineMode"));
         tmp.put("maxPlayers", LMPConfig.getConfigString("maxPlayers"));
         tmp.put("key", LMPConfig.getConfigString("key.value"));
+        tmp.put("show-cords", LMPConfig.getConfigBoolean("settings.show-cords.value"));
+        if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+            tmp.put("uuid", "settings.force-server-uuid.value");
+        }
+
         JSONArray playerArray = new JSONArray();
         for (Player p : Bukkit.getServer().getOnlinePlayers()) {
             JSONObject playerData = new JSONObject();
@@ -210,7 +261,6 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         if (serverIcon != null) {
             tmp.put("serverIcon", serverIcon);
         }
-        tmp.put("edition", "1.2.5");
         return tmp;
     }
 
@@ -227,7 +277,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
             }
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             ImageIO.write(bufferedImage, "png", output);
-            String base64String = DatatypeConverter.printBase64Binary(output.toByteArray());
+            String base64String = Base64.getEncoder().encodeToString(output.toByteArray());
             base64String = base64String.replace("\n", "");
             return base64String;
         } catch (Exception e) {

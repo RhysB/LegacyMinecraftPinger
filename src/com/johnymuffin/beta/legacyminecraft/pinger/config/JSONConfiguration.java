@@ -77,6 +77,11 @@ public class JSONConfiguration implements ConfigurationFile {
         }
     }
 
+    public void writeConfigOption(String key, Object value) {
+        jsonConfig.put(key, value);
+        this.fileChanged = true;
+    }
+
     @Override
     public void load() {
 

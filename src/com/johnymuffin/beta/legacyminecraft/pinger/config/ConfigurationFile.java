@@ -20,6 +20,8 @@ public interface ConfigurationFile {
 
     public void generateConfigOption(String key, Object defaultValue);
 
+    public void writeConfigOption(String key, Object value);
+
     public void load();
 
     public void writeConfigurationFile();
