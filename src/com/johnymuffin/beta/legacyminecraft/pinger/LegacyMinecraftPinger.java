@@ -155,7 +155,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         //Logic to run on first successful ping.
                         if(firstPing) {
                             //Automatically enforce key if server is authenticated.
-                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.value")) {
                                 plugin.logger(Level.INFO, "-------------------[" + plugin.getDescription().getName() + "]-------------------");
                                 plugin.logger(Level.INFO, "Enabling key enforcement as server is authenticated and this can prevent issues if your details every change.\n" +
                                         "If you ever want to disable this, remove your authentication key, and set uuid override to disabled in the config file then restart.");
