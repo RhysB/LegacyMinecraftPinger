@@ -145,9 +145,9 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                             plugin.logger(Level.INFO, "Message from API: " + String.valueOf(jsonResponse.get("notice")));
                         }
                         //Logic to run on first successful ping.
-                        if(firstPing) {
+                        if (firstPing) {
                             //Automatically enforce key if server is authenticated.
-                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled") && LMPConfig.getConfigString("settings.force-server-uuid.value").isEmpty()) {
+                            if (Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated"))) && !LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled") && LMPConfig.getConfigString("settings.force-server-uuid.value").isEmpty()) {
                                 plugin.logger(Level.INFO, "-------------------[" + plugin.getDescription().getName() + "]-------------------");
                                 plugin.logger(Level.INFO, "Enabling key enforcement as server is authenticated and this can prevent issues if your details every change.\n" +
                                         "If you ever want to disable this, remove your authentication key, and set uuid override to disabled in the config file then restart.");
@@ -163,11 +163,11 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         }
 
                         //Allow the API to direct the plugin to set a key. This will be used in the future for automatic verification.
-                        if(jsonResponse.containsKey("newKey")) {
-                            if(Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated")))) {
-                             plugin.logger(Level.INFO, "Your server has been remotely authenticated by the API.");
+                        if (jsonResponse.containsKey("newKey")) {
+                            if (Boolean.valueOf(String.valueOf(jsonResponse.get("authenticated")))) {
+                                plugin.logger(Level.INFO, "Your server has been remotely authenticated by the API.");
                             }
-                            plugin.logger(Level.INFO,"The API has provided the authentication key" + String.valueOf(jsonResponse.get("newKey")) + ". Automatically setting this key in the config.");
+                            plugin.logger(Level.INFO, "The API has provided the authentication key" + String.valueOf(jsonResponse.get("newKey")) + ". Automatically setting this key in the config.");
                             LMPConfig.writeConfigOption("key.value", String.valueOf(jsonResponse.get("newKey")));
                             LMPConfig.writeConfigurationFile();
                         }
@@ -197,9 +197,10 @@ public class LegacyMinecraftPinger extends JavaPlugin {
 
 
     public void verifyUUIDString() {
-        if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+        if (LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
             try {
-                UUID uuid = UUID.fromString("settings.force-server-uuid.value");
+                String uuidString = LMPConfig.getConfigString("settings.force-server-uuid.value");
+                UUID uuid = UUID.fromString(uuidString);
             } catch (Exception e) {
                 logger(Level.WARNING, "A invalid UUID has been specified. The setting is being disabled.");
                 LMPConfig.writeConfigOption("settings.force-server-uuid.enabled", false);
@@ -232,7 +233,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         tmp.put("maxPlayers", LMPConfig.getConfigString("maxPlayers"));
         tmp.put("key", LMPConfig.getConfigString("key.value"));
         tmp.put("show-cords", LMPConfig.getConfigBoolean("settings.show-cords.value"));
-        if(LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
+        if (LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
             tmp.put("uuid", UUID.fromString(LMPConfig.getConfigString("settings.force-server-uuid.value")).toString()); //Error out at the server level if UUID is invalid.
         }
 

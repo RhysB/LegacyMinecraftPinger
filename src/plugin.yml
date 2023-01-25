@@ -2,5 +2,7 @@ name: LegacyMinecraftPinger
 author: RhysB
 website: github.com/rhysb
 main: com.johnymuffin.beta.legacyminecraft.pinger.LegacyMinecraftPinger
-version: 1.2.13
+version: 1.2.14
 visible: false
+softdepend:
+  - BetaCraftPing #This is here to ensure accuracy when checking to see if BetaCraftPing is installed
