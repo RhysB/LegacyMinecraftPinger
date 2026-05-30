@@ -61,6 +61,15 @@ public class YMLConfiguration extends Configuration implements ConfigurationFile
         return Integer.valueOf(getConfigString(key));
     }
 
+    @Override
+    public Integer getConfigInteger(String key, Integer defaultValue)
+    {
+        String cfgValueRaw = getConfigString(key);
+        if (cfgValueRaw == null || cfgValueRaw.isEmpty())
+            return defaultValue;
+        return Integer.valueOf(cfgValueRaw);
+    }
+
     public Long getConfigLong(String key) {
         return Long.valueOf(getConfigString(key));
     }
@@ -71,6 +80,14 @@ public class YMLConfiguration extends Configuration implements ConfigurationFile
 
     public Boolean getConfigBoolean(String key) {
         return Boolean.valueOf(getConfigString(key));
+    }
+
+    public Boolean getConfigBoolean(String key, Boolean defaultValue)
+    {
+        String cfgValueRaw = getConfigString(key);
+        if (cfgValueRaw == null || cfgValueRaw.isEmpty() || !(cfgValueRaw.equalsIgnoreCase("true") || cfgValueRaw.equalsIgnoreCase("false")))
+            return defaultValue;
+        return Boolean.valueOf(cfgValueRaw);
     }
 
 

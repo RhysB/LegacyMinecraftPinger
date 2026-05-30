@@ -10,11 +10,15 @@ public interface ConfigurationFile {
 
     public Integer getConfigInteger(String key);
 
+    public Integer getConfigInteger(String key, Integer defaultValue);
+
     public Long getConfigLong(String key);
 
     public Double getConfigDouble(String key);
 
     public Boolean getConfigBoolean(String key);
+
+    public Boolean getConfigBoolean(String key, Boolean defaultValue);
 
 //    public void writeConfigurationFile();
 

@@ -12,7 +12,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import javax.imageio.ImageIO;
-import javax.xml.bind.DatatypeConverter;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -20,6 +19,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,6 +35,9 @@ public class LegacyMinecraftPinger extends JavaPlugin {
     private ConfigurationFile LMPConfig;
 
     private boolean firstPing = true;
+
+    private boolean lastRequestFailed;
+    private long lastFailedRequestTime;
 
     @Override
     public void onEnable() {
@@ -83,6 +86,9 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         LMPConfig.generateConfigOption("settings.force-server-uuid.value", "");
         LMPConfig.generateConfigOption("settings.force-server-uuid.info", "Allows a server owner to force the UUID the server. This is recommend once you receive a key meaning your UUID won't change if any of your details do. YOUR SERVER MUST HAVE A VALID KEY FOR THE APPROPRIATE UUID TO USE THIS SETTING.");
 
+        LMPConfig.generateConfigOption("settings.http.waitAfterFail", true);
+        LMPConfig.generateConfigOption("settings.http.waitPeriodMinutes", 60);
+
         LMPConfig.generateConfigOption("flags.BetaEvolutions.enabled", false);
         LMPConfig.generateConfigOption("flags.BetaEvolutions.info", "Enabled this if your server runs Beta Evolutions");
         LMPConfig.generateConfigOption("flags.MineOnline.enabled", true);
@@ -109,13 +115,22 @@ public class LegacyMinecraftPinger extends JavaPlugin {
             }
         }
 
-
         taskID = Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
+            if (lastRequestFailed && LMPConfig.getConfigBoolean("settings.http.waitAfterFail", true))
+            {
+                long timeDiffMinutes = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - lastFailedRequestTime);
+                int waitPeriod = LMPConfig.getConfigInteger("settings.http.waitPeriodMinutes", 60);
+                if (timeDiffMinutes < waitPeriod)
+                    return;
+            }
+
             final String jsonData = generateJsonData().toJSONString();
             final String apiURL = LMPConfig.getConfigString("url");
             Bukkit.getServer().getScheduler().scheduleAsyncDelayedTask(plugin, () -> {
                 //Post code directly copied from: https://github.com/codieradical/MineOnlineBroadcast-Bukkit/blob/master/src/MineOnlineBroadcast.java
+                // tweaked slightly by moderator_man for wait-after-fail functionality
                 HttpURLConnection connection = null;
+                int responseCode = 0;
                 try {
                     URL url = new URL(apiURL);
                     connection = (HttpURLConnection) url.openConnection();
@@ -174,27 +189,55 @@ public class LegacyMinecraftPinger extends JavaPlugin {
 
 
                     } catch (Exception e) {
+                        lastRequestFailed = true;
+                        lastFailedRequestTime = System.currentTimeMillis();
+
                         plugin.logger(Level.INFO, "Malformed JSON response after ping returned normal status code: " + e + ": " + e.getMessage());
                         return;
                     }
 
+                    responseCode = tryGetResponseCode(connection);
+
                     rd.close();
                 } catch (Exception e) {
+                    responseCode = tryGetResponseCode(connection);
+                    lastRequestFailed = true;
+                    lastFailedRequestTime = System.currentTimeMillis();
+
                     plugin.logger(Level.WARNING, "An error occurred when attempting to ping: " + e + ": " + e.getMessage());
                     if (this.LMPConfig.getConfigBoolean("debug")) {
                         plugin.logger(Level.WARNING, "Ping Object: " + jsonData);
                     }
                 } finally {
                     if (connection != null)
+                    {
+                        if (responseCode == 0)
+                            plugin.logger(Level.WARNING, "Ping request didn't properly set the responseCode variable. Weird.");
+
+                        if (responseCode == 200)
+                        {
+                            lastRequestFailed = false;
+                            lastFailedRequestTime = 0;
+                        }
                         connection.disconnect();
+                    }
                 }
             }, 0L);
-
-        }, 20, 20 * Integer.valueOf(String.valueOf(LMPConfig.getConfigOption("pingTime", 45))));
-
-
+        }, 20, 20L * LMPConfig.getConfigInteger("pingTime", 45));
     }
 
+    private int tryGetResponseCode(HttpURLConnection connection)
+    {
+        if (connection == null)
+            return 500;
+
+        try
+        {
+            return connection.getResponseCode();
+        } catch (Exception ex) {
+            return 500;
+        }
+    }
 
     public void verifyUUIDString() {
         if (LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
