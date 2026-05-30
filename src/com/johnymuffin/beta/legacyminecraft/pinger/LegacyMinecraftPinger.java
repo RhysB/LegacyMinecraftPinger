@@ -119,7 +119,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
             if (lastRequestFailed && LMPConfig.getConfigBoolean("settings.http.waitAfterFail", true))
             {
                 long timeDiffMinutes = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - lastFailedRequestTime);
-                long waitPeriod = LMPConfig.getConfigInteger("settings.http.waitPeriodMinutes", 60);
+                int waitPeriod = LMPConfig.getConfigInteger("settings.http.waitPeriodMinutes", 60);
                 if (timeDiffMinutes < waitPeriod)
                     return;
             }
@@ -129,6 +129,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
             Bukkit.getServer().getScheduler().scheduleAsyncDelayedTask(plugin, () -> {
                 //Post code directly copied from: https://github.com/codieradical/MineOnlineBroadcast-Bukkit/blob/master/src/MineOnlineBroadcast.java
                 HttpURLConnection connection = null;
+                int responseCode = 0;
                 try {
                     URL url = new URL(apiURL);
                     connection = (HttpURLConnection) url.openConnection();
@@ -150,6 +151,8 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         response.append(line);
                         response.append('\r');
                     }
+
+                    responseCode = connection.getResponseCode();
 
                     try {
                         JSONParser jsonParser = new JSONParser();
@@ -205,10 +208,20 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                     }
                 } finally {
                     if (connection != null)
+                    {
+                        if (responseCode == 0)
+                            plugin.logger(Level.WARNING, "Ping request didn't properly set the responseCode variable. Weird.");
+
+                        if (responseCode == 200)
+                        {
+                            lastRequestFailed = false;
+                            lastFailedRequestTime = 0;
+                        }
                         connection.disconnect();
+                    }
                 }
             }, 0L);
-        }, 20, 20 * Integer.valueOf(String.valueOf(LMPConfig.getConfigOption("pingTime", 45))));
+        }, 20, 20L * LMPConfig.getConfigInteger("pingTime", 45));
     }
 
 
