@@ -128,6 +128,7 @@ public class LegacyMinecraftPinger extends JavaPlugin {
             final String apiURL = LMPConfig.getConfigString("url");
             Bukkit.getServer().getScheduler().scheduleAsyncDelayedTask(plugin, () -> {
                 //Post code directly copied from: https://github.com/codieradical/MineOnlineBroadcast-Bukkit/blob/master/src/MineOnlineBroadcast.java
+                // tweaked slightly by moderator_man for wait-after-fail functionality
                 HttpURLConnection connection = null;
                 int responseCode = 0;
                 try {
@@ -151,8 +152,6 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         response.append(line);
                         response.append('\r');
                     }
-
-                    responseCode = connection.getResponseCode();
 
                     try {
                         JSONParser jsonParser = new JSONParser();
@@ -197,8 +196,11 @@ public class LegacyMinecraftPinger extends JavaPlugin {
                         return;
                     }
 
+                    responseCode = tryGetResponseCode(connection);
+
                     rd.close();
                 } catch (Exception e) {
+                    responseCode = tryGetResponseCode(connection);
                     lastRequestFailed = true;
                     lastFailedRequestTime = System.currentTimeMillis();
 
@@ -224,6 +226,18 @@ public class LegacyMinecraftPinger extends JavaPlugin {
         }, 20, 20L * LMPConfig.getConfigInteger("pingTime", 45));
     }
 
+    private int tryGetResponseCode(HttpURLConnection connection)
+    {
+        if (connection == null)
+            return 500;
+
+        try
+        {
+            return connection.getResponseCode();
+        } catch (Exception ex) {
+            return 500;
+        }
+    }
 
     public void verifyUUIDString() {
         if (LMPConfig.getConfigBoolean("settings.force-server-uuid.enabled")) {
