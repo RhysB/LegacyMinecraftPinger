@@ -1,0 +1,8 @@
+name: LegacyMinecraftPinger
+author: RhysB
+website: github.com/rhysb
+main: com.johnymuffin.beta.legacyminecraft.pinger.LegacyMinecraftPinger
+version: ${project.version}
+softdepend:
+  - BetaCraftPing #This is here to ensure accuracy when checking to see if BetaCraftPing is installed
+  - PoseidonCompat # This is for servers running Poseidon V2

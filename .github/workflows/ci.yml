@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Don't let two pushes to the same branch race; PR runs are disposable, but a
+# release or a Nexus deploy in flight is not.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Read Maven project version
+        id: version
+        run: |
+          VERSION=$(mvn -B -q -DforceStdout help:evaluate -Dexpression=project.version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Build
+        run: mvn -B clean install
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-artifact
+          path: |
+            target/*.jar
+            !target/original-*.jar
+
+  release:
+    name: GitHub Release
+    needs: build
+    # Same gate as before: branch pushes only, and never for a -SNAPSHOT version.
+    if: github.event_name == 'push' && !endsWith(needs.build.outputs.version, '-SNAPSHOT')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-artifact
+          path: artifact
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          files: artifact/*.jar
+
+#  deploy:
+#    name: Deploy to Nexus
+#    needs: build
+#    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      # server-id must match the <id> in the pom's <distributionManagement>, or
+#      # `mvn deploy` skips the credentials and fails with a 401.
+#      # The pom's distributionManagement id is johnymuffin-nexus.
+#      - name: Set up JDK 25
+#        uses: actions/setup-java@v4
+#        with:
+#          distribution: temurin
+#          java-version: "25"
+#          cache: maven
+#          server-id: legacyminecraft-nexus
+#          server-username: MAVEN_USERNAME
+#          server-password: MAVEN_PASSWORD
+#
+#      - name: Build & Deploy to Nexus
+#        run: mvn -B -DskipTests clean deploy
+#        env:
+#          MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+#          MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
